@@ -19,10 +19,10 @@ public class App
 
         writer.close();
     }
+
     public static void main( String[] args ) throws Exception
     {
-
-
+        PageScraper.startScraping("urls.txt");
 //        UrlScraper.startScraping(pagesCount);
 //        Set<String> urls = UrlScraper.getUniqueUrls();
 //        writeUrlsToFile("urls.txt", urls);
