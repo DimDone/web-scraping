@@ -50,6 +50,24 @@
       <version>2.18.1</version>
     </dependency>
 
+    <!-- https://mvnrepository.com/artifact/co.elastic.clients/elasticsearch-java -->
+    <dependency>
+      <groupId>co.elastic.clients</groupId>
+      <artifactId>elasticsearch-java</artifactId>
+      <version>8.17.2</version>
+    </dependency>
 
   </dependencies>
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <source>15</source>
+          <target>15</target>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
 </project>
