@@ -1,6 +1,8 @@
 package ru.webapp.serviceapp2;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
+import co.elastic.clients.elasticsearch._types.SortOrder;
+import co.elastic.clients.elasticsearch._types.query_dsl.*;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
 import co.elastic.clients.elasticsearch.core.search.Hit;
 
@@ -33,13 +35,58 @@ public class ElasticsearchSearcher {
 
     private void searchAndPrintResults(String query) {
         try {
+            Query exactTermQuery = TermQuery.of(t -> t
+                    .field("pageTitle.keyword")
+                    .value(query)
+                    .boost(15.0f) // Самый высокий приоритет для точного совпадения
+            )._toQuery();
+
+            Query exactPhraseQuery = MatchPhraseQuery.of(m -> m
+                    .field("pageTitle")
+                    .query(query)
+                    .boost(10.0f) // Высокий приоритет для точной фразы в заголовке
+                    .slop(2) // Допускает 2 слова между терминами
+            )._toQuery();
+
+            Query titleMatchQuery = MatchQuery.of(m -> m
+                    .field("pageTitle")
+                    .query(query)
+                    .boost(8.0f)
+                    .operator(Operator.And) // Все слова должны быть в заголовке
+            )._toQuery();
+
+            Query contentMatchQuery = MatchQuery.of(m -> m
+                    .field("pageContent")
+                    .query(query)
+                    .boost(3.0f)
+                    .operator(Operator.Or) // Хотя бы одно слово в контенте
+            )._toQuery();
+
+            Query fuzzyQuery = MultiMatchQuery.of(m -> m
+                    .fields("pageTitle^3", "pageContent")
+                    .query(query)
+                    .fuzziness("AUTO")
+                    .prefixLength(2) // Первые 2 символа должны точно совпадать
+                    .boost(2.0f) // Ниже приоритет для fuzzy-результатов
+            )._toQuery();
+
+            // 2. Собираем итоговый запрос
             SearchResponse<Map> response = elasticsearchClient.search(s -> s
                             .index("game_articles")
                             .query(q -> q
-                                    .multiMatch(m -> m
-                                            .fields("pageTitle", "pageContent")
-                                            .fuzziness("AUTO")
-                                            .query(query))
+                                    .bool(b -> b
+                                            .should(
+                                                    exactTermQuery,
+                                                    exactPhraseQuery,
+                                                    titleMatchQuery,
+                                                    contentMatchQuery,
+                                                    fuzzyQuery
+                                            )
+                                            .minimumShouldMatch("2")
+                                    )
+                            )
+                            .sort(so -> so
+                                    .score(s1 -> s1.order(SortOrder.Desc))
                             )
                             .size(10),
                     Map.class
